@@ -4,7 +4,7 @@ const expenseSchema = new mongoose.Schema({
     trip: {type: mongoose.Schema.Types.ObjectId, ref: 'Trip',required: true},
     name: {type: String, required: true},
     amount: {type: Number, required: true},
-    category: {type: String,enum: ['f', 't', 'a', 's', 'e', 'tt'], required: true},
+    category: {type: String,enum: ['food', 'transport', 'accomodation', 'shopping', 'entertainment', 'other'], required: true, default: 'other'},
     description: {type: String, default: ''},
     created: {type: Date, default: Date.now},
     paid_by: [{

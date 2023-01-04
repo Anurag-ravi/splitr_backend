@@ -36,20 +36,25 @@ const generateAndSendOTP = async (email) => {
     // }
 
     // send otp
-    let mail_sent = sendMail(email, otp);
-    if (mail_sent) {
-        return {
-            send : true,
-            otp : otp,
-            hash : fullHash
+    sendMail(email, otp).then((data) => {
+        if (data) {
+            return {
+                send : true,
+                hash : fullHash
+            };
+        } else {
+            return {
+                send : false
+            };
         }
-    } else {
+    }).catch((err) => {
         return {
-            send : true,
-            otp : otp,
-            hash : fullHash
-        }
-    }
+            send : false
+        };
+    });
+    return {
+        send : false
+    };
 }
 
 const verifyOTP = async (email, otp, hash) => {

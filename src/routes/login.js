@@ -88,5 +88,31 @@ router.post('/register', async (req, res) => {
     }
 });
 
+router.post('/update', async (req, res) => {
+    try {
+        const { name, country_code, phone, upi_id } = req.body;
+        let u = await User.findOne({
+            email: email
+        });
+        if (!u) {
+            return res.json({ status: 400, message: "User not found" });
+        }
+        u.name = name || u.name;
+        u.country_code = country_code || u.country_code;
+        u.phone = phone || u.phone;
+        u.upi_id = upi_id || u.upi_id;
+        u.save((err, user) => {
+            if (err) {
+                return res.json({ status: 400, message: "An Error occured, try again" });
+            } else {
+                return res.json({ status: 200, message: "User updated successfully", user: user });
+            }
+        });
+    } catch (err) {
+        return res.json({ status: 400, message: "An Error occured, try again" });
+    }
+});
+
+
 
 module.exports = router;

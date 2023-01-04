@@ -5,7 +5,7 @@ const mongoose = require('mongoose');
 const { authMiddleware } = require('./src/middlewares/auth');
 const app = express();
 const { PORT } = process.env;
-const port = 5000 || PORT;
+const port = PORT || 5000;
 
 app.use(bodyParser.json()) ;
 app.use(express.json());
@@ -21,4 +21,4 @@ mongoose.connect('mongodb://127.0.0.1:27017/splitr', {useNewUrlParser: true, use
         console.log('Connected to database');
     }
 });
-app.listen(port, () => console.log(`Example app listening on port ${port}!`));
+app.listen(port, () => console.log(`Splitr app listening on port ${port}!`));

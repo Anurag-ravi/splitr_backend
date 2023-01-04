@@ -6,6 +6,7 @@ const tripSchema = new mongoose.Schema({
     description: {type: String, default: ''},
     created: {type: Date, default: Date.now},
     currency: {type: String, default: 'INR'},
+    created_by: {type: mongoose.Schema.Types.ObjectId, ref: 'User'},
     users: [{type: mongoose.Schema.Types.ObjectId, ref: 'TripUser'}],
     expenses: [{type: mongoose.Schema.Types.ObjectId, ref: 'Expense'}],
     payments: [{type: mongoose.Schema.Types.ObjectId, ref: 'Payment'}]

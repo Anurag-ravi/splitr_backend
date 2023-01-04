@@ -39,6 +39,7 @@ router.post('/new', async (req, res) => {
         name,
         description,
         currency,
+        created_by: req.user._id,
     });
     const tripuser = new TripUser({
         user: req.user._id,
@@ -61,7 +62,15 @@ router.post('/new', async (req, res) => {
 
 router.get('/:code', async (req, res) => {
     const { code } = req.params;
-    const trip = await Trip.findOne({code})
+    let trip = await Trip.findOne({code});
+    if(!trip){
+        res.json({ status: 400, message: 'Trip not found' });
+    }
+    let isInvolved = trip.users.find(user => user === req.user._id);
+    if(!isInvolved){
+        res.json({ status: 400, message: 'You are not involved in this trip' });
+    }
+    trip = await Trip.findOne({code})
     .populate({
         path: "users",
         model: "TripUser",
@@ -88,11 +97,11 @@ router.get('/:code', async (req, res) => {
 });
 
 router.post('/addUser', async (req, res) => {
-    let { code, email } = req.body;
+    let { code, name } = req.body;
     if(!code){
         res.json({ status: 400, message: 'Code is required' });
     }
-    if(!email){
+    if(!name){
         res.json({ status: 400, message: 'Email is required' });
     }
     const trip = await Trip.findOne({code});
