@@ -30,4 +30,11 @@ const TripSchema: Schema = new Schema(
     }
 );
 
+TripSchema.post('deleteOne', async function (doc) {
+    const { participants, expenses, payments } = doc;
+    await mongoose.model('Participant').deleteMany({ _id: { $in: participants } });
+    await mongoose.model('Expense').deleteMany({ _id: { $in: expenses } });
+    await mongoose.model('Payment').deleteMany({ _id: { $in: payments } });
+});
+
 export default mongoose.model<ITripModel>('Trip', TripSchema);
