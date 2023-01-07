@@ -1,6 +1,5 @@
 import { Request, Response } from 'express';
 import User from '../models/user';
-import Logging from '../utilities/logging';
 import { generateAndSendOTP, verifyOTP } from '../utilities/otp';
 import { generateToken } from '../utilities/token';
 

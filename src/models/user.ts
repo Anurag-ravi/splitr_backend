@@ -5,7 +5,6 @@ export interface IUser {
     country_code: string;
     email: string;
     phone: string;
-    trips: string[];
     upi_id: string;
     verified: boolean;
 }
@@ -18,7 +17,6 @@ const UserSchema: Schema = new Schema(
         country_code: { type: String, required: true },
         email: { type: String, required: true, unique: true },
         phone: { type: String, required: true, unique: true },
-        trips: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Trip' }],
         upi_id: { type: String, unique: true },
         verified: { type: Boolean, default: false }
     },

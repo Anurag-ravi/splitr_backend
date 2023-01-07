@@ -5,6 +5,7 @@ import { config } from './config/config';
 import Logging from './utilities/logging';
 import authRouter from './routes/login';
 import userRouter from './routes/user';
+import tripRouter from './routes/trip';
 import { authMiddleware } from './middlewares/auth';
 
 const router = express();
@@ -53,6 +54,7 @@ const StartServer = () => {
     /** Routes */
     router.use('/auth', authRouter);
     router.use('/user', authMiddleware, userRouter);
+    router.use('/trip', authMiddleware, tripRouter);
 
     /** Healthcheck */
     router.get('/ping', (req, res, next) => res.status(200).json({ hello: 'world' }));
