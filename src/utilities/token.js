@@ -1,5 +1,5 @@
 var CryptoJS = require("crypto-js");
-const User = require("../models/user");
+const User = require("../models/usermodel");
 require('dotenv').config();
 
 const generateToken = async (email) => {

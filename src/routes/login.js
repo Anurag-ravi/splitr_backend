@@ -1,7 +1,7 @@
 const express = require('express');
 const {generateAndSendOTP,verifyOTP} = require("../utilities/otp");
 const router = express.Router();
-const User = require("../models/User");
+const User = require("../models/usermodel");
 const { generateToken } = require('../utilities/token');
 
 
