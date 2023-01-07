@@ -3,6 +3,9 @@ import http from 'http';
 import mongoose from 'mongoose';
 import { config } from './config/config';
 import Logging from './utilities/logging';
+import authRouter from './routes/login';
+import userRouter from './routes/user';
+import { authMiddleware } from './middlewares/auth';
 
 const router = express();
 
@@ -11,7 +14,7 @@ mongoose
     .set('strictQuery', true)
     .connect(config.MONGO_URL, {})
     .then(() => {
-        Logging.info('Mongo connected successfully.');
+        Logging.success('Mongo connected successfully.');
         StartServer();
     })
     .catch((error) => Logging.error(error));
@@ -48,6 +51,8 @@ const StartServer = () => {
     });
 
     /** Routes */
+    router.use('/auth', authRouter);
+    router.use('/user', authMiddleware, userRouter);
 
     /** Healthcheck */
     router.get('/ping', (req, res, next) => res.status(200).json({ hello: 'world' }));
@@ -63,5 +68,7 @@ const StartServer = () => {
         });
     });
 
-    http.createServer(router).listen(config.PORT, () => Logging.info(`Server is running on port ${config.PORT}`));
+    http.createServer(router).listen(config.PORT, () => {
+        Logging.verbose(`Server is running on port ${config.PORT}`);
+    });
 };
