@@ -10,7 +10,7 @@ export const login = async (req: Request, res: Response) => {
             generateAndSendOTP(user.email)
                 .then((data) => {
                     if (data.send) {
-                        return res.json({ status: 200, message: 'OTP sent successfully', hash: data.hash });
+                        return res.json({ status: 200, message: 'OTP sent successfully', hash: data.hash, user: user });
                     } else {
                         return res.json({ status: 400, message: 'An Error occured, try again' });
                     }
@@ -61,7 +61,7 @@ export const verify = async (req: Request, res: Response) => {
 
 export const register = async (req: Request, res: Response) => {
     try {
-        const { name, country_code, phone, email, upi_id }: { name: string; country_code: string; phone: string; email: string; upi_id: string } = req.body;
+        var { name, country_code, phone, email, upi_id }: { name: string; country_code: string; phone: string; email: string; upi_id: string } = req.body;
         var user = await User.findOne({ email });
         if (user && user.verified) {
             return res.json({ status: 400, message: 'User already exists' });
@@ -69,6 +69,7 @@ export const register = async (req: Request, res: Response) => {
         if (user && !user.verified) {
             user.delete();
         }
+        country_code = country_code || '+91';
         user = new User({
             name,
             country_code,

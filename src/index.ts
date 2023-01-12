@@ -6,6 +6,7 @@ import Logging from './utilities/logging';
 import authRouter from './routes/login';
 import userRouter from './routes/user';
 import tripRouter from './routes/trip';
+import cors from 'cors';
 import { authMiddleware } from './middlewares/auth';
 
 const router = express();
@@ -37,6 +38,7 @@ const StartServer = () => {
 
     router.use(express.urlencoded({ extended: true }));
     router.use(express.json());
+    router.use(cors());
 
     /** Rules of our API */
     router.use((req, res, next) => {

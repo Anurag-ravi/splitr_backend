@@ -18,16 +18,17 @@ export const sendEmail = async (to: string, otp: string): Promise<boolean> => {
         subject: 'OTP for Splitr',
         text: `Your verification code is ${otp}. It will be valid for 5 minutes.`
     };
+    console.log('otp', otp);
     return new Promise((resolve, reject) => {
-        transporter.sendMail(mailOptions, function (error, info) {
-            if (error) {
-                Logging.error(error.message);
-                resolve(false);
-            } else {
-                Logging.success('OTP sent: ' + otp);
-                Logging.success('Email sent: ' + info.response);
-                resolve(true);
-            }
-        });
+        // transporter.sendMail(mailOptions, function (error, info) {
+        //     if (error) {
+        //         Logging.error(error.message);
+        //         resolve(false);
+        //     } else {
+        //         Logging.success('OTP sent: ' + otp);
+        //         Logging.success('Email sent: ' + info.response);
+        resolve(true);
+        // }
+        // });
     });
 };
