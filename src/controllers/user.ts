@@ -24,3 +24,16 @@ export const updateProfile = async (req: Request, res: Response) => {
         return res.json({ status: 400, message: 'An Error occured, try again' });
     }
 };
+
+export const getUser = async (req: Request, res: Response) => {
+    try {
+        let user: IUserModel = req.user;
+        if (!user) {
+            return res.json({ status: 400, message: 'User not found' });
+        } else {
+            return res.json({ status: 200, message: 'User found', user: user });
+        }
+    } catch (err) {
+        return res.json({ status: 400, message: 'An Error occured, try again' });
+    }
+};
