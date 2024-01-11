@@ -1,8 +1,7 @@
 const otpGenerator = require("otp-generator");
 var CryptoJS = require("crypto-js");
 const sendMail = require("./mail");
-var request = require('request');
-const { TWO_FACTOR_KEY } = process.env;
+const config = require("../config/config");
 
 const generateAndSendOTP = async (email) => {
     const otp = otpGenerator.generate(6, {
@@ -13,7 +12,7 @@ const generateAndSendOTP = async (email) => {
     const delay = 5 * 60 * 1000;
     const expires = Date.now() + delay;
     const data = `${email}.${otp}.${expires}`;
-    const hash = CryptoJS.HmacSHA256(data, process.env.SECRET_KEY);
+    const hash = CryptoJS.HmacSHA256(data, config.JWT_SECRET);
     const readableHash = CryptoJS.enc.Base64.stringify(hash);
     const fullHash = `${readableHash}.${expires}`;
 
@@ -64,7 +63,7 @@ const verifyOTP = async (email, otp, hash) => {
     
         if (now < parseInt(expires)) {
           const data = `${email}.${otp}.${expires}`;
-          const newHash = CryptoJS.HmacSHA256(data, process.env.SECRET_KEY);
+          const newHash = CryptoJS.HmacSHA256(data, config.JWT_SECRET);
           const readableHash = CryptoJS.enc.Base64.stringify(newHash);
           if (readableHash === hashValue) {
             return {

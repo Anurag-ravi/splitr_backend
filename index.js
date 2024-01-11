@@ -1,24 +1,50 @@
-require('dotenv').config();
 const express = require('express');
-const bodyParser = require('body-parser');
+const http = require('http');
 const mongoose = require('mongoose');
-const { authMiddleware } = require('./src/middlewares/auth');
-const app = express();
-const { PORT } = process.env;
-const port = PORT || 5000;
+const cors = require('cors');
+const config = require('./src/config/config');
+const Logging = require('./src/utilities/logging');
+const router = express();
 
-app.use(bodyParser.json()) ;
-app.use(express.json());
+/** Connect to Mongo */
+mongoose
+    .set('strictQuery', true)
+    .connect(config.MONGODB_URI, {})
+    .then(() => {
+        Logging.success('Mongo connected successfully.');
+        StartServer();
+    })
+    .catch((error) => Logging.error(error));
 
-app.get('/', (req, res) => res.send('Hello World!'));
-app.use('/user', require('./src/routes/login'));
-app.use('/trip',authMiddleware, require('./src/routes/trip'));
+/** Only Start Server if Mongoose Connects */
+const StartServer = () => {
+    /** Log the request */
+    router.use((req, res, next) => {
+        /** Log the req */
+        Logging.info(`Incoming - [${req.method} ${req.url}]`);
 
-mongoose.connect('mongodb://127.0.0.1:27017/splitr', {useNewUrlParser: true, useUnifiedTopology: true}, (err) => {
-    if (err) {
-        console.log(err.message);
-    } else {
-        console.log('Connected to database');
-    }
-});
-app.listen(port, () => console.log(`Splitr app listening on port ${port}!`));
+        res.on('finish', () => {
+            /** Log the res */
+            Logging.info(`Result : [${req.method} ${req.url}] - STATUS: ${res.statusCode}`);
+        });
+
+        next();
+    });
+
+    router.use(express.urlencoded({ extended: false }));
+    router.use(express.json());
+    router.use(cors());
+
+
+    /** Routes */
+
+    router.get('/', (req, res) => {
+        res.status(200).json({ hello: 'world' });
+    });
+
+
+    const httpServer = http.createServer(router);
+    httpServer.listen(config.PORT, () => {
+        Logging.verbose(`Server is running on port ${config.PORT}`);
+    });
+};

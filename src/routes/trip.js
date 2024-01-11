@@ -3,7 +3,7 @@ const router = express.Router();
 const otpGenerator = require("otp-generator");
 
 
-const Trip = require("../models/Trip");
+const Trip = require("../models/trip");
 
 router.get('/', async (req, res) => {
     const trips = await req.user.populate('trips').trips;

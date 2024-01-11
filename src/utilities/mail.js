@@ -1,31 +1,30 @@
 const nodemailer = require("nodemailer");
-require("dotenv").config();
+const config = require('./config');
+const Logging = require('./logging');
 
-const sendMail = async (email, otp) => {
-    var transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.EMAIL_HOST_USER,
-        pass: process.env.EMAIL_HOST_PASSWORD,
-      },
-    });
-  
-    var mailOptions = {
-      from: process.env.EMAIL_HOST_USER,
-      to: email,
-      subject: "OTP for Splitr",
-      text: `Your verification code is ${otp}. It will be valid for 5 minutes for ${email}`,
+// create reusable transporter object using the default SMTP transport
+let transporter = nodemailer.createTransport({
+    service: "Gmail",
+    auth: {
+        user: config.EMAIL, // replace with your email address
+        pass: config.PASSWORD // replace with your email password
+    }
+});
+
+const sendMail = (to, subject, html) => {
+    let mailOptions = {
+        from: config.EMAIL, // replace with your email address
+        to: to, // replace with student's email address
+        subject: subject,
+        html: html
     };
-  
-    transporter.sendMail(mailOptions, function (error, info) {
-      if (error) {
-        console.log(error);
-        return false;
-      } else {
-        console.log("Email sent: " + info.response);
-        return true;
-      }
-    });
-};
+    transporter.sendMail(mailOptions, function(error, info) {
+        if (error) {
+            Logging.error(error.message);
+        } else {
+            Logging.success("Email sent: " + info.response);
+        }
+    }); 
+}
 
 module.exports = sendMail;

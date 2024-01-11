@@ -1,28 +1,29 @@
-var CryptoJS = require("crypto-js");
-const User = require("../models/usermodel");
-require('dotenv').config();
+const jwt = require('jsonwebtoken');
+const config = require('../config/config');
+const User = require('../models/user');
 
-const generateToken = async (email) => {
-    const token = CryptoJS.AES.encrypt(JSON.stringify(email), process.env.SECRET_KEY).toString();
-    return token;
-}
+const generateToken = (user) => {
+    const payload = {
+        email: user.email
+    };
+    return jwt.sign(payload, config.JWT_SECRET, { expiresIn: '10d' });
+};
 
 const verifyToken = async (token) => {
-    const bytes  = CryptoJS.AES.decrypt(token, process.env.SECRET_KEY);
-    const email = bytes.toString(CryptoJS.enc.Utf8);
-    const user = await User.findOne({email});
-    if(!user){
-        return {
-            status: false,
-        };
+    try {
+        var decoded = jwt.verify(token, config.JWT_SECRET);
+        var email = decoded.email;
+        const user = await User.findOne({ email });
+        if (!user) {
+            return { error: 'User not found', user: null, valid: false };
+        }
+        return { error: null, user: user, valid: true };
+    } catch (err) {
+        return { error: err, user: null, valid: false };
     }
-    return {
-        status: true,
-        user,
-    };
-}
+};
 
 module.exports = {
     generateToken,
-    verifyToken,
-}
+    verifyToken
+};
