@@ -1,5 +1,5 @@
 const nodemailer = require("nodemailer");
-const config = require('./config');
+const config = require('../config/config');
 const Logging = require('./logging');
 
 // create reusable transporter object using the default SMTP transport

@@ -3,6 +3,7 @@ const {generateAndSendOTP,verifyOTP} = require("../utilities/otp");
 const router = express.Router();
 const User = require("../models/usermodel");
 const { generateToken } = require('../utilities/token');
+const { oauthLogin } = require('../controllers/login');
 
 
 router.post('/login', async (req, res) => {
@@ -113,6 +114,7 @@ router.post('/update', async (req, res) => {
     }
 });
 
+router.post('/oauth-login', oauthLogin);
 
 
 module.exports = router;

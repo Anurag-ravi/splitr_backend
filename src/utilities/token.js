@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 const config = require('../config/config');
-const User = require('../models/user');
+const User = require('../models/usermodel');
 
 const generateToken = (user) => {
     const payload = {
@@ -23,7 +23,18 @@ const verifyToken = async (token) => {
     }
 };
 
+const verifyOauthToken = async (token) => {
+    try {
+        var decoded = jwt.verify(token, config.JWT_SECRET);
+        var email = decoded.email;
+        return { error: null, email: email, valid: true };
+    } catch (err) {
+        return { error: err, email: null, valid: false };
+    }
+}
+
 module.exports = {
     generateToken,
-    verifyToken
+    verifyToken,
+    verifyOauthToken
 };
