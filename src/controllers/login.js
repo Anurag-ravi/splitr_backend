@@ -12,14 +12,13 @@ const oauthLogin = async (req, res) => {
     var newUser;
     if(!user) {
         newUser = await User.create({
-            email: email,
-            verified: true
+            email: email
         });
         const newToken = generateToken(newUser);
         return res.json({status:200, token: newToken, registered_now:true});
     }
     const newToken = generateToken(user);
-    return res.json({status:200, token: newToken, registered_now:false});
+    return res.json({status:200, token: newToken, registered_now:!user.verified});
 }
 
 module.exports = {
