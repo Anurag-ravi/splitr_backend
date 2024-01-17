@@ -1,12 +1,12 @@
 const { verifyToken } = require("../utilities/token");
 
 const authMiddleware = (req, res, next) => {
-    const token = req.headers.authorization;
+    const token = req.headers['authorization'];
     if (!token) {
         res.json({ status: 401, message: 'Unauthorized' });
     }
     verifyToken(token).then((result) => {
-        if (result.status) {
+        if (result.valid) {
             req.user = result.user;
             next();
         } else {
