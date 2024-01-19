@@ -15,10 +15,10 @@ const oauthLogin = async (req, res) => {
             email: email
         });
         const newToken = generateToken(newUser);
-        return res.json({status:200, token: newToken, registered_now:true});
+        return res.json({status:200, token: newToken, registered_now:true,user:newUser});
     }
     const newToken = generateToken(user);
-    return res.json({status:200, token: newToken, registered_now:!user.verified});
+    return res.json({status:200, token: newToken, registered_now:!user.verified,user:user});
 }
 
 const oauthRegister = async (req, res) => {
