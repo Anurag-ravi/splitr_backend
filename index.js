@@ -41,6 +41,9 @@ const StartServer = () => {
     router.get('/', (req, res) => {
         res.status(200).json({ hello: 'world' });
     });
+    router.get('/demo', (req, res) => {
+        res.status(200).json({ demo: 'demo' });
+    });
     router.use('/auth', require('./src/routes/login'));
 
     const httpServer = http.createServer(router);
