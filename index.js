@@ -45,6 +45,7 @@ const StartServer = () => {
         res.status(200).json({ demo: 'demo' });
     });
     router.use('/auth', require('./src/routes/login'));
+    router.use('/trip', require('./src/routes/trip'));
 
     const httpServer = http.createServer(router);
     httpServer.listen(config.PORT, () => {

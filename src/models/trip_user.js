@@ -6,7 +6,7 @@ const tripUserSchema = new mongoose.Schema({
     name: {type: String},
     paid: {type: Number, default: 0},
     owed: {type: Number, default: 0},
-    is_involved: {type: Boolean, default: true},
+    is_involved: {type: Boolean, default: false},
 });
 
 const TripUser = mongoose.model('TripUser', tripUserSchema);

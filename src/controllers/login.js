@@ -35,7 +35,21 @@ const oauthRegister = async (req, res) => {
     return res.json({status:200,user:user,token:token});
 }
 
+const updateProfile = async (req, res) => {
+    const { name, country_code, number, upi_id } = req.body;
+    const user = req.user;
+    if(!name ||!country_code ||!number ||!upi_id) return res.json({status:400, message:"Missing parameters"});
+    user.name = name;
+    user.country_code = country_code;
+    user.phone = number;
+    user.upi_id = upi_id;
+    await user.save();
+    const token = generateToken(user);
+    return res.json({status:200,user:user,token:token});
+}
+
 module.exports = {
     oauthLogin,
-    oauthRegister
+    oauthRegister,
+    updateProfile
 }
