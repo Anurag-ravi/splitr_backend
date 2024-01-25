@@ -51,6 +51,25 @@ const getTrips = async (req, res) => {
     return res.json({status:200, message:"Trips fetched successfully", data:trips.trips});
 }
 
+const getTrip = async (req, res) => {
+    const {id} = req.params
+    const trip = await Trip.findOne({id:id})
+    .populate({
+        path: 'users',
+        model: 'TripUser'
+    })
+    .populate({
+        path: 'expenses',
+        model: 'Expense'
+    })
+    .populate({
+        path: 'payments',
+        model: 'Payment'
+    });
+    if(!trip) return res.json({status:400, message:"Trip not found"});
+    return res.json({status:200, message:"Trip fetched successfully", data:trip});
+}
+
 const joinTrips = async (req, res) => {
     const {code} = req.body;
     const user = req.user;
@@ -74,5 +93,6 @@ const joinTrips = async (req, res) => {
 module.exports = {
     createTrip,
     getTrips,
-    joinTrips
+    joinTrips,
+    getTrip
 }
