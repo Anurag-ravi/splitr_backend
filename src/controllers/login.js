@@ -48,8 +48,16 @@ const updateProfile = async (req, res) => {
     return res.json({status:200,user:user,token:token});
 }
 
+const getFriends = async (req, res) => {
+    const {contacts} = req.body;
+    contacts.splice(contacts.indexOf(req.user.phone), 1);
+    const friends = await User.find({phone : { "$in": contacts}}).sort({"name":"asc"});
+    return res.json({status:200,friends:friends});
+}
+
 module.exports = {
     oauthLogin,
     oauthRegister,
-    updateProfile
+    updateProfile,
+    getFriends
 }

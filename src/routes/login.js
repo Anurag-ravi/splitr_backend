@@ -3,7 +3,7 @@ const {generateAndSendOTP,verifyOTP} = require("../utilities/otp");
 const router = express.Router();
 const User = require("../models/usermodel");
 const { generateToken } = require('../utilities/token');
-const { oauthLogin, oauthRegister, updateProfile } = require('../controllers/login');
+const { oauthLogin, oauthRegister, updateProfile, getFriends } = require('../controllers/login');
 const { authMiddleware } = require('../middlewares/auth');
 
 
@@ -118,5 +118,6 @@ router.post('/update', async (req, res) => {
 router.post('/oauth-login', oauthLogin);
 router.post('/oauth-register',authMiddleware ,oauthRegister);
 router.post('/update-profile',authMiddleware,updateProfile);
+router.post('/get-friends',authMiddleware,getFriends);
 
 module.exports = router;

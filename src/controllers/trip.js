@@ -51,7 +51,28 @@ const getTrips = async (req, res) => {
     return res.json({status:200, message:"Trips fetched successfully", data:trips.trips});
 }
 
+const joinTrips = async (req, res) => {
+    const {code} = req.body;
+    const user = req.user;
+    if(!code) return res.json({status:400, message:"Missing parameters"});
+    var trip = await Trip.findOne({code:code});
+    if(!trip) return res.json({status:400, message:"Trip not found"});
+    var tripuser = await TripUser.findOne({trip:trip._id, user:user._id});
+    if(tripuser) return res.json({status:400, message:"Already joined this trip"});
+    tripuser = await TripUser.create({
+        trip: trip._id,
+        user: user._id,
+        name: user.name
+    });
+    trip.users.push(tripuser._id);
+    await trip.save();
+    user.trips.push(trip._id);
+    await user.save();
+    return res.json({status:200, message:"Trip joined successfully", data:trip});
+}
+
 module.exports = {
     createTrip,
-    getTrips
+    getTrips,
+    joinTrips
 }
