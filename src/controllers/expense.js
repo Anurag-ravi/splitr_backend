@@ -22,7 +22,7 @@ const createExpense = async (req, res) => {
 
   var user_involved = false;
   tripObj.users.map((tripUser) => {
-    if (tripUser._id === req.user._id) {
+    if (tripUser.user === req.user._id) {
       user_involved = true;
     }
   });
