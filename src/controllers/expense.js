@@ -14,7 +14,7 @@ const createExpense = async (req, res) => {
     !paid_for
   )
     return res.json({ status: 400, message: "Fill all the fields" });
-  const tripObj = await Trip.findOne({ _id, trip }).populate({
+  const tripObj = await Trip.findOne({ _id: trip }).populate({
     path: "users",
     model: "TripUser",
   });
