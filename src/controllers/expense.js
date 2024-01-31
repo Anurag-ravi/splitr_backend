@@ -38,6 +38,8 @@ const createExpense = async (req, res) => {
     paid_by,
     paid_for,
   });
+  tripObj.expenses.push(expense._id);
+  await tripObj.save();
   return res.json({ status: 200, data: expense });
 };
 

@@ -31,6 +31,7 @@ const createTrip = async (req, res) => {
     trip: trip._id,
     user: user._id,
     name: user.name,
+    dp: user.dp
   });
   trip.users.push(tripuser._id);
   await trip.save();
@@ -92,6 +93,7 @@ const joinTrips = async (req, res) => {
     trip: trip._id,
     user: user._id,
     name: user.name,
+    dp: user.dp
   });
   trip.users.push(tripuser._id);
   await trip.save();
