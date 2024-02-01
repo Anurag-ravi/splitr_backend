@@ -71,6 +71,10 @@ const expenseSchema = new mongoose.Schema({
         ref: "TripUser",
         required: true,
       },
+      share_or_percent: {
+        type: Double,
+        default: 0.0,
+      },
       amount: { type: Double, required: true, default: 0.0 },
     },
   ],
