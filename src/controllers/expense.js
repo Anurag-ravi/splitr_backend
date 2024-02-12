@@ -43,6 +43,18 @@ const createExpense = async (req, res) => {
   return res.json({ status: 200, data: expense });
 };
 
+const deleteExpense = async (req,res) => {
+    const { id } = req.params;
+    const expense = await Expense.findById(id).populate('trip')
+    ;
+    if(!expense){
+      return res.json({ status: 400, message: "Expense not found" });
+    }
+    await expense.delete();
+    return res.json({ status: 200, data: 'Expense Deleted' });
+}
+
 module.exports = {
   createExpense,
+  deleteExpense
 };

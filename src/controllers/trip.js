@@ -87,8 +87,78 @@ const joinTrips = async (req, res) => {
   var trip = await Trip.findOne({ code: code });
   if (!trip) return res.json({ status: 400, message: "Trip not found" });
   var tripuser = await TripUser.findOne({ trip: trip._id, user: user._id });
-  if (tripuser)
+  if (tripuser){
+    if(!tripuser.involved){
+      tripuser.involved = true;
+      await tripuser.save();
+      user.trips.push(trip._id);
+      await user.save();
+      return res.json({
+        status: 200,
+        message: "Trip joined successfully",
+        data: trip,
+      });
+    }
     return res.json({ status: 400, message: "Already joined this trip" });
+  }
+  tripuser = await TripUser.create({
+    trip: trip._id,
+    user: user._id,
+    name: user.name,
+    dp: user.dp
+  });
+  trip.users.push(tripuser._id);
+  await trip.save();
+  user.trips.push(trip._id);
+  await user.save();
+  return res.json({
+    status: 200,
+    message: "Trip joined successfully",
+    data: trip,
+  });
+};
+
+const leaveTrip = async (req,res) => {
+  const { id } = req.params;
+  const tripUser = await TripUser.findOne({trip:id,user:req.user._id});
+  if(!tripUser){
+    return res.json({ status: 400, message: "Not part of that group" });
+  }
+  tripUser.involved = false;
+  await tripUser.save();
+  var x = [];
+  req.user.trips.map((trip) => {
+    if(trip === tripUser.trip){
+      x.push(trip);
+    }
+  })
+  req.user.trips = x;
+  await req.user.save();
+  return res.json({ status: 200, message: "Left this trip" });
+}
+
+const addToTrip = async (req, res) => {
+  const { user_id } = req.body;
+  const { id } = req.params;
+  const user = await User.findById(user_id);
+  if (!user_id) return res.json({ status: 400, message: "Missing parameters" });
+  var trip = await Trip.findById(id);
+  if (!trip) return res.json({ status: 400, message: "Trip not found" });
+  var tripuser = await TripUser.findOne({ trip: trip._id, user: user._id });
+  if (tripuser){
+    if(!tripuser.involved){
+      tripuser.involved = true;
+      await tripuser.save();
+      user.trips.push(trip._id);
+      await user.save();
+      return res.json({
+        status: 200,
+        message: "Trip joined successfully",
+        data: trip,
+      });
+    }
+    return res.json({ status: 400, message: "Already joined this trip" });
+  }
   tripuser = await TripUser.create({
     trip: trip._id,
     user: user._id,
@@ -111,4 +181,6 @@ module.exports = {
   getTrips,
   joinTrips,
   getTrip,
+  leaveTrip,
+  addToTrip,
 };
