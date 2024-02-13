@@ -31,7 +31,7 @@ const createTrip = async (req, res) => {
     trip: trip._id,
     user: user._id,
     name: user.name,
-    dp: user.dp
+    dp: user.dp,
   });
   trip.users.push(tripuser._id);
   await trip.save();
@@ -87,8 +87,8 @@ const joinTrips = async (req, res) => {
   var trip = await Trip.findOne({ code: code });
   if (!trip) return res.json({ status: 400, message: "Trip not found" });
   var tripuser = await TripUser.findOne({ trip: trip._id, user: user._id });
-  if (tripuser){
-    if(!tripuser.involved){
+  if (tripuser) {
+    if (!tripuser.involved) {
       tripuser.involved = true;
       await tripuser.save();
       user.trips.push(trip._id);
@@ -105,7 +105,7 @@ const joinTrips = async (req, res) => {
     trip: trip._id,
     user: user._id,
     name: user.name,
-    dp: user.dp
+    dp: user.dp,
   });
   trip.users.push(tripuser._id);
   await trip.save();
@@ -118,24 +118,18 @@ const joinTrips = async (req, res) => {
   });
 };
 
-const leaveTrip = async (req,res) => {
+const leaveTrip = async (req, res) => {
   const { id } = req.params;
-  const tripUser = await TripUser.findOne({trip:id,user:req.user._id});
-  if(!tripUser){
+  const tripUser = await TripUser.findOne({ trip: id, user: req.user._id });
+  if (!tripUser) {
     return res.json({ status: 400, message: "Not part of that group" });
   }
   tripUser.involved = false;
   await tripUser.save();
-  var x = [];
-  req.user.trips.map((trip) => {
-    if(trip === tripUser.trip){
-      x.push(trip);
-    }
-  })
-  req.user.trips = x;
+  req.user.trips = req.user.trips.filter((trip) => trip.toString() !== id);
   await req.user.save();
   return res.json({ status: 200, message: "Left this trip" });
-}
+};
 
 const addToTrip = async (req, res) => {
   const { user_id } = req.body;
@@ -145,8 +139,8 @@ const addToTrip = async (req, res) => {
   var trip = await Trip.findById(id);
   if (!trip) return res.json({ status: 400, message: "Trip not found" });
   var tripuser = await TripUser.findOne({ trip: trip._id, user: user._id });
-  if (tripuser){
-    if(!tripuser.involved){
+  if (tripuser) {
+    if (!tripuser.involved) {
       tripuser.involved = true;
       await tripuser.save();
       user.trips.push(trip._id);
@@ -163,7 +157,7 @@ const addToTrip = async (req, res) => {
     trip: trip._id,
     user: user._id,
     name: user.name,
-    dp: user.dp
+    dp: user.dp,
   });
   trip.users.push(tripuser._id);
   await trip.save();
@@ -176,23 +170,23 @@ const addToTrip = async (req, res) => {
   });
 };
 
-const addNewUserToTrip = async (req, res) =>{
+const addNewUserToTrip = async (req, res) => {
   const { id } = req.params;
-  const { name,email } = req.body;
+  const { name, email } = req.body;
   const trip = await Trip.findById(id);
-  if(!trip){
+  if (!trip) {
     return res.json({ status: 400, message: "Trip not found" });
   }
-  var user = await User.findOne({email:email});
-  if(!user){
+  var user = await User.findOne({ email: email });
+  if (!user) {
     user = await User.create({
       name: name,
       email: email,
     });
   }
   var tripuser = await TripUser.findOne({ trip: trip._id, user: user._id });
-  if (tripuser){
-    if(!tripuser.involved){
+  if (tripuser) {
+    if (!tripuser.involved) {
       tripuser.involved = true;
       await tripuser.save();
       user.trips.push(trip._id);
@@ -209,14 +203,19 @@ const addNewUserToTrip = async (req, res) =>{
     trip: trip._id,
     user: user._id,
     name: user.name,
-    dp: user.dp
+    dp: user.dp,
   });
   trip.users.push(tripuser._id);
   await trip.save();
   user.trips.push(trip._id);
   await user.save();
-  return res.json({ status: 200, message: "Trip joined successfully", user,tripuser });
-}
+  return res.json({
+    status: 200,
+    message: "Trip joined successfully",
+    user,
+    tripuser,
+  });
+};
 
 module.exports = {
   createTrip,
