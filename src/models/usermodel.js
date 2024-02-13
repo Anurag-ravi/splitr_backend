@@ -10,7 +10,7 @@ const userSchema = new mongoose.Schema({
     email: {type: String, required: true,unique: true},
     phone: {type: String,unique: true},
     trips: [{type: mongoose.Schema.Types.ObjectId, ref: 'Trip'}],
-    upi_id: {type: String,unique: true},
+    upi_id: {type: String},
     verified: {type: Boolean, default: false},
     created: {type: Date, default: Date.now},
     dp: {type: String,default: generateRandomNumber}

@@ -176,6 +176,48 @@ const addToTrip = async (req, res) => {
   });
 };
 
+const addNewUserToTrip = async (req, res) =>{
+  const { id } = req.params;
+  const { name,email } = req.body;
+  const trip = await Trip.findById(id);
+  if(!trip){
+    return res.json({ status: 400, message: "Trip not found" });
+  }
+  var user = await User.findOne({email:email});
+  if(!user){
+    user = await User.create({
+      name: name,
+      email: email,
+    });
+  }
+  var tripuser = await TripUser.findOne({ trip: trip._id, user: user._id });
+  if (tripuser){
+    if(!tripuser.involved){
+      tripuser.involved = true;
+      await tripuser.save();
+      user.trips.push(trip._id);
+      await user.save();
+      return res.json({
+        status: 200,
+        message: "Trip joined successfully",
+        data: trip,
+      });
+    }
+    return res.json({ status: 400, message: "Already joined this trip" });
+  }
+  tripuser = await TripUser.create({
+    trip: trip._id,
+    user: user._id,
+    name: user.name,
+    dp: user.dp
+  });
+  trip.users.push(tripuser._id);
+  await trip.save();
+  user.trips.push(trip._id);
+  await user.save();
+  return res.json({ status: 200, message: "Trip joined successfully", user,tripuser });
+}
+
 module.exports = {
   createTrip,
   getTrips,
@@ -183,4 +225,5 @@ module.exports = {
   getTrip,
   leaveTrip,
   addToTrip,
+  addNewUserToTrip,
 };

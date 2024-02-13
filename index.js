@@ -52,6 +52,7 @@ const StartServer = () => {
     router.use('/auth', require('./src/routes/login'));
     router.use('/trip', require('./src/routes/trip'));
     router.use('/expense', require('./src/routes/expense'));
+    router.use('/payment', require('./src/routes/payment'));
 
     const httpServer = http.createServer(router);
     httpServer.listen(config.PORT, () => {

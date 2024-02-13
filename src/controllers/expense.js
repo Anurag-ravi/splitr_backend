@@ -50,6 +50,12 @@ const deleteExpense = async (req,res) => {
     if(!expense){
       return res.json({ status: 400, message: "Expense not found" });
     }
+    const trip = await Trip.findById(expense.trip._id);
+    if(!trip){
+      return res.json({ status: 400, message: "Trip not found" });
+    }
+    trip.expenses = trip.expenses.filter(exp => exp.toString() !== id);
+    await trip.save();
     await expense.delete();
     return res.json({ status: 200, data: 'Expense Deleted' });
 }
