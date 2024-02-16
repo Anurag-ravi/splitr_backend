@@ -217,6 +217,18 @@ const addNewUserToTrip = async (req, res) => {
   });
 };
 
+const editTripName = async (req, res) => {
+  const { id } = req.params;
+  const { name } = req.body;
+  const trip = await Trip.findById(id);
+  if (!trip) {
+    return res.json({ status: 400, message: "Trip not found" });
+  }
+  trip.name = name;
+  await trip.save();
+  return res.json({ status: 200, message: "Trip name updated" });
+};
+
 module.exports = {
   createTrip,
   getTrips,
@@ -225,4 +237,5 @@ module.exports = {
   leaveTrip,
   addToTrip,
   addNewUserToTrip,
+  editTripName,
 };

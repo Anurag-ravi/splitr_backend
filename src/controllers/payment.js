@@ -28,7 +28,18 @@ const deletePayment = async (req, res) => {
     return res.json({ status: 200, message: "Payment deleted" });
 }
 
+const updatePayment = async (req, res) => {
+    const { id } = req.params;
+    const { amount } = req.body;
+    const payment = await Payment.findById(id);
+    if (!payment) return res.json({ status: 400, message: "Payment not found" });
+    payment.amount = amount;
+    await payment.save();
+    return res.json({ status: 200, message: "Payment updated", data: payment });
+}
+
 module.exports = {
     createPayment,
-    deletePayment
+    deletePayment,
+    updatePayment
 }
