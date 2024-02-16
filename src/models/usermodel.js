@@ -8,7 +8,7 @@ const userSchema = new mongoose.Schema({
     name: {type: String},
     country_code: {type: String,},
     email: {type: String, required: true,unique: true},
-    phone: {type: String,unique: true},
+    phone: {type: String},
     trips: [{type: mongoose.Schema.Types.ObjectId, ref: 'Trip'}],
     upi_id: {type: String},
     verified: {type: Boolean, default: false},
