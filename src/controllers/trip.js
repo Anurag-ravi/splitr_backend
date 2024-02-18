@@ -3,6 +3,8 @@ const { verifyOauthToken, generateToken } = require("../utilities/token");
 const Trip = require("../models/trip");
 const TripUser = require("../models/trip_user");
 const User = require("../models/usermodel");
+const Expense = require("../models/expense");
+const Payment = require("../models/payment");
 
 const createTrip = async (req, res) => {
   const { name } = req.body;
@@ -229,6 +231,45 @@ const editTripName = async (req, res) => {
   return res.json({ status: 200, message: "Trip name updated" });
 };
 
+const deleteTrip = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const trip = await Trip.findById(id).populate([
+      { path: "expenses", select: "_id" },
+      { path: "payments", select: "_id" },
+      { path: "users" },
+    ]);
+
+    if (!trip) {
+      return res.json({ status: 400, message: "Trip not found" });
+    }
+
+    trip.users.forEach(async (tripuser) => {
+      const user_id = tripuser.user;
+      const user = await User.findById(user_id);
+      if (user) {
+        user.trips = user.trips.filter((trip) => trip.toString() !== id);
+        await user.save();
+      }
+      await TripUser.findByIdAndDelete(tripuser._id);
+    });
+
+    trip.expenses.forEach(async (expense) => {
+      await Expense.findByIdAndDelete(expense._id);
+    });
+
+    trip.payments.forEach(async (payment) => {
+      await Payment.findByIdAndDelete(payment._id);
+    });
+
+    await trip.delete();
+    return res.json({ status: 200, message: "Trip deleted" });
+  } catch (error) {
+    console.log(error);
+    return res.json({ status: 500, message: "Server error" });
+  }
+};
+
 module.exports = {
   createTrip,
   getTrips,
@@ -238,4 +279,5 @@ module.exports = {
   addToTrip,
   addNewUserToTrip,
   editTripName,
+  deleteTrip,
 };
