@@ -51,6 +51,20 @@ const getTrips = async (req, res) => {
   const trips = await user.populate({
     path: "trips",
     model: "Trip",
+    populate: [
+      {
+        path: "expenses",
+        model: "Expense",
+      },
+      {
+        path: "payments",
+        model: "Payment",
+      },
+      {
+        path: "users",
+        model: "TripUser",
+      },
+    ],
   });
   return res.json({
     status: 200,
