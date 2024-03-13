@@ -186,6 +186,73 @@ const addToTrip = async (req, res) => {
   });
 };
 
+const addMultipleUsersToTrip = async (req, res) => {
+  const { id } = req.params;
+  const { users } = req.body;
+  const trip = await Trip.findById(id);
+  if (!trip) {
+    return res.json({ status: 400, message: "Trip not found" });
+  }
+  for (let i = 0; i < users.length; i++) {
+    const user = await User.findById(users[i]);
+    if (!user) {
+      continue;
+    }
+    var tripuser = await TripUser.findOne({ trip: trip._id, user: user._id });
+    if (tripuser) {
+      if (!tripuser.involved) {
+        tripuser.involved = true;
+        await tripuser.save();
+        user.trips.push(trip._id);
+        await user.save();
+      }
+    } else {
+      tripuser = await TripUser.create({
+        trip: trip._id,
+        user: user._id,
+        name: user.name,
+        dp: user.dp,
+      });
+      trip.users.push(tripuser._id);
+      await trip.save();
+      user.trips.push(trip._id);
+      await user.save();
+    }
+  }
+  return res.json({
+    status: 200,
+    message: "Trip joined successfully",
+    data: trip,
+  });
+};
+
+const removeMultipleUsersFromTrip = async (req, res) => {
+  const { id } = req.params;
+  const { users } = req.body;
+  const trip = await Trip.findById(id);
+  if (!trip) {
+    return res.json({ status: 400, message: "Trip not found" });
+  }
+  for (let i = 0; i < users.length; i++) {
+    const user = await User.findById(users[i]);
+    if (!user) {
+      continue;
+    }
+    var tripuser = await TripUser.findOne({ trip: trip._id, user: user._id });
+    if (tripuser) {
+      tripuser.involved = false;
+      await tripuser.save();
+      user.trips = user.trips.filter((trip) => trip.toString() !== id);
+      await user.save();
+    }
+  }
+  return res.json({
+    status: 200,
+    message: "Removed from trip successfully",
+    data: trip,
+  });
+};
+
 const addNewUserToTrip = async (req, res) => {
   const { id } = req.params;
   const { name, email } = req.body;
@@ -294,4 +361,6 @@ module.exports = {
   addNewUserToTrip,
   editTripName,
   deleteTrip,
+  addMultipleUsersToTrip,
+  removeMultipleUsersFromTrip,
 };
