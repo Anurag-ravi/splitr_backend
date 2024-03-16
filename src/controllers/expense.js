@@ -2,8 +2,16 @@ const Expense = require("../models/expense");
 const Trip = require("../models/trip");
 
 const createExpense = async (req, res) => {
-  const { trip, name, amount, category, split_type, paid_by, paid_for } =
-    req.body;
+  const {
+    trip,
+    name,
+    amount,
+    category,
+    split_type,
+    paid_by,
+    paid_for,
+    created,
+  } = req.body;
   if (
     !trip ||
     !name ||
@@ -14,6 +22,9 @@ const createExpense = async (req, res) => {
     !paid_for
   )
     return res.json({ status: 400, message: "Fill all the fields" });
+  if (!created) {
+    created = new Date.now();
+  }
   const tripObj = await Trip.findOne({ _id: trip }).populate({
     path: "users",
     model: "TripUser",
@@ -37,14 +48,24 @@ const createExpense = async (req, res) => {
     split_type,
     paid_by,
     paid_for,
+    created,
   });
   tripObj.expenses.push(expense._id);
   await tripObj.save();
   return res.json({ status: 200, data: expense });
 };
 const updateExpense = async (req, res) => {
-  const { id, trip, name, amount, category, split_type, paid_by, paid_for } =
-    req.body;
+  const {
+    id,
+    trip,
+    name,
+    amount,
+    category,
+    split_type,
+    paid_by,
+    paid_for,
+    created,
+  } = req.body;
   if (
     !trip ||
     !name ||
@@ -78,6 +99,9 @@ const updateExpense = async (req, res) => {
   expense.split_type = split_type;
   expense.paid_by = paid_by;
   expense.paid_for = paid_for;
+  if (created) {
+    expense.created = created;
+  }
   await expense.save();
   return res.json({ status: 200, data: expense });
 };
