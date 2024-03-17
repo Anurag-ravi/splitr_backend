@@ -3,7 +3,7 @@ const Trip = require("../models/trip");
 const TripUser = require("../models/trip_user");
 
 const createPayment = async (req, res) => {
-  const { by, to, amount, trip_id, created } = req.body;
+  var { by, to, amount, trip_id, created } = req.body;
   if (!created) {
     created = new Date();
   }
