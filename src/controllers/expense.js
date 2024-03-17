@@ -23,7 +23,7 @@ const createExpense = async (req, res) => {
   )
     return res.json({ status: 400, message: "Fill all the fields" });
   if (!created) {
-    created = new Date.now();
+    created = new Date();
   }
   const tripObj = await Trip.findOne({ _id: trip }).populate({
     path: "users",

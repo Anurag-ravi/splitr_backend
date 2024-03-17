@@ -5,7 +5,7 @@ const TripUser = require("../models/trip_user");
 const createPayment = async (req, res) => {
   const { by, to, amount, trip_id, created } = req.body;
   if (!created) {
-    created = new Date.now();
+    created = new Date();
   }
   const trip = await Trip.findById(trip_id);
   if (!trip) return res.json({ status: 400, message: "Trip not found" });
