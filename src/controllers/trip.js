@@ -219,10 +219,14 @@ const addMultipleUsersToTrip = async (req, res) => {
       await user.save();
     }
   }
+  var modified_trip = await Trip.findById(id).populate({
+    path: "users",
+    model: "TripUser",
+  });
   return res.json({
     status: 200,
     message: "Trip joined successfully",
-    data: trip,
+    data: modified_trip.users,
   });
 };
 
@@ -246,10 +250,14 @@ const removeMultipleUsersFromTrip = async (req, res) => {
       await user.save();
     }
   }
+  var modified_trip = await Trip.findById(id).populate({
+    path: "users",
+    model: "TripUser",
+  });
   return res.json({
     status: 200,
     message: "Removed from trip successfully",
-    data: trip,
+    data: modified_trip.users,
   });
 };
 
@@ -274,10 +282,14 @@ const addNewUserToTrip = async (req, res) => {
       await tripuser.save();
       user.trips.push(trip._id);
       await user.save();
+      var modified_trip = await Trip.findById(id).populate({
+        path: "users",
+        model: "TripUser",
+      });
       return res.json({
         status: 200,
         message: "Trip joined successfully",
-        data: trip,
+        data: modified_trip.users,
       });
     }
     return res.json({ status: 400, message: "Already joined this trip" });
@@ -292,10 +304,14 @@ const addNewUserToTrip = async (req, res) => {
   await trip.save();
   user.trips.push(trip._id);
   await user.save();
+  var modified_trip = await Trip.findById(id).populate({
+    path: "users",
+    model: "TripUser",
+  });
   return res.json({
     status: 200,
     message: "Trip joined successfully",
-    data: trip,
+    data: modified_trip.users,
   });
 };
 
