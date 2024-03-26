@@ -295,8 +295,7 @@ const addNewUserToTrip = async (req, res) => {
   return res.json({
     status: 200,
     message: "Trip joined successfully",
-    user,
-    tripuser,
+    data: trip,
   });
 };
 
