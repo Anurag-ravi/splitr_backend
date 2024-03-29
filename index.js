@@ -54,7 +54,7 @@ const StartServer = () => {
   });
   router.post("/log", async (req, res) => {
     const { message, user, category } = req.body;
-    if (!message || !user || !category)
+    if (!message)
       return res.json({ status: 400, message: "Missing parameters" });
     await Log.create({ message, user, category });
     return res.json({ status: 200, message: "Log created successfully" });

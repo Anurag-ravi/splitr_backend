@@ -6,7 +6,7 @@ const logSchema = new mongoose.Schema({
   },
   category: {
     type: String,
-    enum: ["log", "bug/feature", "support"],
+    enum: ["log", "bug/feature", "support", "feedback"],
     default: "log",
   },
   message: {
