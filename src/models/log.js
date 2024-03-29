@@ -1,6 +1,14 @@
 const mongoose = require("mongoose");
 
 const logSchema = new mongoose.Schema({
+  user: {
+    type: String,
+  },
+  category: {
+    type: String,
+    enum: ["log", "bug/feature", "support"],
+    default: "log",
+  },
   message: {
     type: String,
     required: true,

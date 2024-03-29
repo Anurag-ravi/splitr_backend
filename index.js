@@ -53,10 +53,10 @@ const StartServer = () => {
     res.status(200).json({ demo: "demo" });
   });
   router.post("/log", async (req, res) => {
-    const { message } = req.body;
-    if (!message)
+    const { message, user, category } = req.body;
+    if (!message || !user || !category)
       return res.json({ status: 400, message: "Missing parameters" });
-    await Log.create({ message });
+    await Log.create({ message, user, category });
     return res.json({ status: 200, message: "Log created successfully" });
   });
   router.use("/auth", require("./src/routes/login"));
