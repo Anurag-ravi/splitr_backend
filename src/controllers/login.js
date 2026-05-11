@@ -1,6 +1,8 @@
+const {admin} = require("../utilities/firebase_admin");
 const User = require("../models/usermodel");
 const { generateAndSendOTP, verifyOTP } = require("../utilities/otp");
 const { verifyOauthToken, generateToken } = require("../utilities/token");
+const { error } = require("../utilities/logging");
 
 const oauthLogin = async (req, res) => {
   const { token } = req.body;
@@ -32,6 +34,44 @@ const oauthLogin = async (req, res) => {
     registered_now: !user.verified,
     user: user,
   });
+};
+
+const oauthLoginV1 = async (req, res) => {
+  const { token } = req.body;
+  if (!token)
+    return res.json({ status: 400, message: "OAuth token not found" });
+
+  try {
+    const decodedToken = await admin.auth().verifyIdToken(token);
+    const email = decodedToken.email;
+    if (!email) {
+      return res.json({ status: 401, message: "Invalid OAuth token" });
+    }
+    const user = await User.findOne({ email: email });
+    var newUser;
+    if (!user) {
+      newUser = await User.create({
+        email: email,
+      });
+      const newToken = generateToken(newUser);
+      return res.json({
+        status: 200,
+        token: newToken,
+        registered_now: true,
+        user: newUser,
+      });
+    }
+    const newToken = generateToken(user);
+    return res.json({
+      status: 200,
+      token: newToken,
+      registered_now: !user.verified,
+      user: user,
+    });
+  } catch (err) {
+    error(`Error verifying Firebase ID token: ${err}`);
+    return res.json({ status: 401, message: "Invalid OAuth token" });
+  }
 };
 
 const oauthRegister = async (req, res) => {
@@ -107,6 +147,28 @@ const otpVerify = async (req, res) => {
   });
 };
 
+const updateFcmToken = async (req, res) => {
+  const { token, action } = req.body;
+  if (!token || !action)
+    return res.json({ status: 400, message: "Missing parameters" });
+  if (!["add", "remove"].includes(action))
+    return res.json({
+      status: 400,
+      message: "action must be 'add' or 'remove'",
+    });
+  const user = req.user;
+  if (action === "add") {
+    if (!user.fcm_tokens.includes(token)) {
+      user.fcm_tokens.push(token);
+      await user.save();
+    }
+  } else {
+    user.fcm_tokens = user.fcm_tokens.filter((t) => t !== token);
+    await user.save();
+  }
+  return res.json({ status: 200, message: "FCM token updated" });
+};
+
 module.exports = {
   oauthLogin,
   oauthRegister,
@@ -114,4 +176,6 @@ module.exports = {
   getFriends,
   otpLogin,
   otpVerify,
+  updateFcmToken,
+  oauthLoginV1,
 };
