@@ -1,6 +1,7 @@
 const jwt = require("jsonwebtoken");
 const config = require("../config/config");
 const User = require("../models/usermodel");
+const Logging = require("./src/utilities/logging");
 
 const generateToken = (user) => {
   const payload = {
@@ -11,7 +12,6 @@ const generateToken = (user) => {
 
 const verifyToken = async (token) => {
   try {
-    console.log(token, config.JWT_SECRET);
     var decoded = jwt.verify(token, config.JWT_SECRET);
     var email = decoded.email;
     const user = await User.findOne({ email });
@@ -20,17 +20,18 @@ const verifyToken = async (token) => {
     }
     return { error: null, user: user, valid: true };
   } catch (err) {
+    Logging.error(err);
     return { error: err, user: null, valid: false };
   }
 };
 
 const verifyOauthToken = async (token) => {
   try {
-    console.log(token, config.JWT_SECRET);
     var decoded = jwt.verify(token, config.JWT_SECRET);
     var email = decoded.email;
     return { error: null, email: email, valid: true };
   } catch (err) {
+    Logging.error(err);
     return { error: err, email: null, valid: false };
   }
 };

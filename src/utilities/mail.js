@@ -20,10 +20,10 @@ const sendMail = async (to, subject, html) => {
   };
   try {
     let info = await transporter.sendMail(mailOptions);
-    Logging.log("Email sent: " + info.response);
+    Logging.info("Email sent: " + info.response);
     return true;
   } catch (err) {
-    Logging.log(err);
+    Logging.error(err);
     return false;
   }
 };
