@@ -8,6 +8,7 @@ require("./src/models/usermodel");
 require("./src/models/trip");
 require("./src/models/trip_user");
 require("./src/models/log");
+require("./src/utilities/firebase_admin");
 const config = require("./src/config/config");
 const Logging = require("./src/utilities/logging");
 const Log = require("./src/models/log");

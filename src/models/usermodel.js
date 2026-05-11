@@ -13,7 +13,8 @@ const userSchema = new mongoose.Schema({
     upi_id: {type: String},
     verified: {type: Boolean, default: false},
     created: {type: Date, default: Date.now},
-    dp: {type: String,default: generateRandomNumber}
+    dp: { type: String, default: generateRandomNumber },
+    fcm_tokens: [{ type: String }],
 });
 
 
