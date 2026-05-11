@@ -1,7 +1,7 @@
 const jwt = require("jsonwebtoken");
 const config = require("../config/config");
 const User = require("../models/usermodel");
-const Logging = require("./src/utilities/logging");
+const Logging = require("../utilities/logging");
 
 const generateToken = (user) => {
   const payload = {
