@@ -8,6 +8,8 @@ require("./src/models/usermodel");
 require("./src/models/trip");
 require("./src/models/trip_user");
 require("./src/models/log");
+require("./src/models/comment");
+require("./src/models/activity");
 require("./src/utilities/firebase_admin");
 const config = require("./src/config/config");
 const Logging = require("./src/utilities/logging");
@@ -64,6 +66,8 @@ const StartServer = () => {
   router.use("/trip", require("./src/routes/trip"));
   router.use("/expense", require("./src/routes/expense"));
   router.use("/payment", require("./src/routes/payment"));
+  router.use("/comment", require("./src/routes/comment"));
+  router.use("/activity", require("./src/routes/activity"));
 
   const httpServer = http.createServer(router);
   httpServer.listen(config.PORT, () => {

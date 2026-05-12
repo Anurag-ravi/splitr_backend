@@ -1,10 +1,23 @@
 const otpGenerator = require("otp-generator");
-const { verifyOauthToken, generateToken } = require("../utilities/token");
 const Trip = require("../models/trip");
 const TripUser = require("../models/trip_user");
 const User = require("../models/usermodel");
 const Expense = require("../models/expense");
 const Payment = require("../models/payment");
+const Activity = require("../models/activity");
+const Comment = require("../models/comment");
+const Logging = require("../utilities/logging");
+const { recordActivity } = require("../utilities/activity");
+
+const safeRecord = async (args) => {
+  try {
+    await recordActivity(args);
+  } catch (e) {
+    Logging.error(
+      `recordActivity(${args.action_type}) failed: ${e.message}`
+    );
+  }
+};
 
 const createTrip = async (req, res) => {
   const { name } = req.body;
@@ -35,10 +48,19 @@ const createTrip = async (req, res) => {
     name: user.name,
     dp: user.dp,
   });
+  await tripuser.save();
   trip.users.push(tripuser._id);
   await trip.save();
   user.trips.push(trip._id);
   await user.save();
+  await safeRecord({
+    action_type: "trip_create",
+    trip_id: trip._id,
+    actor_user_id: user._id,
+    entity_id: trip._id,
+    entity_type: "trip",
+    payload: {},
+  });
   return res.json({
     status: 200,
     message: "Trip created successfully",
@@ -48,46 +70,47 @@ const createTrip = async (req, res) => {
 
 const getTrips = async (req, res) => {
   const user = req.user;
-  const trips = await user.populate({
+  await user.populate({
     path: "trips",
     model: "Trip",
     populate: [
-      {
-        path: "expenses",
-        model: "Expense",
-      },
-      {
-        path: "payments",
-        model: "Payment",
-      },
-      {
-        path: "users",
-        model: "TripUser",
-      },
+      { path: "expenses", model: "Expense" },
+      { path: "payments", model: "Payment" },
+      { path: "users", model: "TripUser" },
     ],
   });
+
+  const tripIds = user.trips.map((t) => t._id);
+  const unreadAgg = tripIds.length
+    ? await Activity.aggregate([
+        { $match: { user: user._id, trip: { $in: tripIds }, read: false } },
+        { $group: { _id: "$trip", count: { $sum: 1 } } },
+      ])
+    : [];
+  const unreadMap = new Map(
+    unreadAgg.map((x) => [x._id.toString(), x.count])
+  );
+
+  const tripsData = user.trips.map((trip) => {
+    const tripData = trip.toObject();
+    tripData.unread_activity_count =
+      unreadMap.get(tripData._id.toString()) || 0;
+    return tripData;
+  });
+
   return res.json({
     status: 200,
     message: "Trips fetched successfully",
-    data: trips.trips,
+    data: tripsData,
   });
 };
 
 const getTrip = async (req, res) => {
   const { id } = req.params;
   const trip = await Trip.findOne({ _id: id })
-    .populate({
-      path: "users",
-      model: "TripUser",
-    })
-    .populate({
-      path: "expenses",
-      model: "Expense",
-    })
-    .populate({
-      path: "payments",
-      model: "Payment",
-    });
+    .populate({ path: "users", model: "TripUser" })
+    .populate({ path: "expenses", model: "Expense" })
+    .populate({ path: "payments", model: "Payment" });
   if (!trip) return res.json({ status: 400, message: "Trip not found" });
   return res.json({
     status: 200,
@@ -109,6 +132,14 @@ const joinTrips = async (req, res) => {
       await tripuser.save();
       user.trips.push(trip._id);
       await user.save();
+      await safeRecord({
+        action_type: "member_join",
+        trip_id: trip._id,
+        actor_user_id: user._id,
+        entity_id: trip._id,
+        entity_type: "trip",
+        payload: {},
+      });
       return res.json({
         status: 200,
         message: "Trip joined successfully",
@@ -123,10 +154,19 @@ const joinTrips = async (req, res) => {
     name: user.name,
     dp: user.dp,
   });
+  await tripuser.save();
   trip.users.push(tripuser._id);
   await trip.save();
   user.trips.push(trip._id);
   await user.save();
+  await safeRecord({
+    action_type: "member_join",
+    trip_id: trip._id,
+    actor_user_id: user._id,
+    entity_id: trip._id,
+    entity_type: "trip",
+    payload: {},
+  });
   return res.json({
     status: 200,
     message: "Trip joined successfully",
@@ -144,6 +184,15 @@ const leaveTrip = async (req, res) => {
   await tripUser.save();
   req.user.trips = req.user.trips.filter((trip) => trip.toString() !== id);
   await req.user.save();
+  await safeRecord({
+    action_type: "member_leave",
+    trip_id: id,
+    actor_user_id: req.user._id,
+    entity_id: id,
+    entity_type: "trip",
+    payload: {},
+    extra_recipient_user_ids: [req.user._id],
+  });
   return res.json({ status: 200, message: "Left this trip" });
 };
 
@@ -161,6 +210,14 @@ const addToTrip = async (req, res) => {
       await tripuser.save();
       user.trips.push(trip._id);
       await user.save();
+      await safeRecord({
+        action_type: "member_add",
+        trip_id: trip._id,
+        actor_user_id: req.user._id,
+        entity_id: trip._id,
+        entity_type: "trip",
+        payload: { target_user_id: user._id },
+      });
       return res.json({
         status: 200,
         message: "Trip joined successfully",
@@ -175,10 +232,19 @@ const addToTrip = async (req, res) => {
     name: user.name,
     dp: user.dp,
   });
+  await tripuser.save();
   trip.users.push(tripuser._id);
   await trip.save();
   user.trips.push(trip._id);
   await user.save();
+  await safeRecord({
+    action_type: "member_add",
+    trip_id: trip._id,
+    actor_user_id: req.user._id,
+    entity_id: trip._id,
+    entity_type: "trip",
+    payload: { target_user_id: user._id },
+  });
   return res.json({
     status: 200,
     message: "Trip joined successfully",
@@ -205,6 +271,14 @@ const addMultipleUsersToTrip = async (req, res) => {
         await tripuser.save();
         user.trips.push(trip._id);
         await user.save();
+        await safeRecord({
+          action_type: "member_add",
+          trip_id: trip._id,
+          actor_user_id: req.user._id,
+          entity_id: trip._id,
+          entity_type: "trip",
+          payload: { target_user_id: user._id },
+        });
       }
     } else {
       tripuser = await TripUser.create({
@@ -213,10 +287,19 @@ const addMultipleUsersToTrip = async (req, res) => {
         name: user.name,
         dp: user.dp,
       });
+      await tripuser.save();
       trip.users.push(tripuser._id);
       await trip.save();
       user.trips.push(trip._id);
       await user.save();
+      await safeRecord({
+        action_type: "member_add",
+        trip_id: trip._id,
+        actor_user_id: req.user._id,
+        entity_id: trip._id,
+        entity_type: "trip",
+        payload: { target_user_id: user._id },
+      });
     }
   }
   var modified_trip = await Trip.findById(id).populate({
@@ -248,6 +331,15 @@ const removeMultipleUsersFromTrip = async (req, res) => {
       await tripuser.save();
       user.trips = user.trips.filter((trip) => trip.toString() !== id);
       await user.save();
+      await safeRecord({
+        action_type: "member_remove",
+        trip_id: trip._id,
+        actor_user_id: req.user._id,
+        entity_id: trip._id,
+        entity_type: "trip",
+        payload: { target_user_id: user._id },
+        extra_recipient_user_ids: [user._id],
+      });
     }
   }
   var modified_trip = await Trip.findById(id).populate({
@@ -270,10 +362,7 @@ const addNewUserToTrip = async (req, res) => {
   }
   var user = await User.findOne({ email: email });
   if (!user) {
-    user = await User.create({
-      name: name,
-      email: email,
-    });
+    user = await User.create({ name: name, email: email });
   }
   var tripuser = await TripUser.findOne({ trip: trip._id, user: user._id });
   if (tripuser) {
@@ -282,6 +371,14 @@ const addNewUserToTrip = async (req, res) => {
       await tripuser.save();
       user.trips.push(trip._id);
       await user.save();
+      await safeRecord({
+        action_type: "member_add",
+        trip_id: trip._id,
+        actor_user_id: req.user._id,
+        entity_id: trip._id,
+        entity_type: "trip",
+        payload: { target_user_id: user._id },
+      });
       var modified_trip = await Trip.findById(id).populate({
         path: "users",
         model: "TripUser",
@@ -300,10 +397,19 @@ const addNewUserToTrip = async (req, res) => {
     name: user.name,
     dp: user.dp,
   });
+  await tripuser.save();
   trip.users.push(tripuser._id);
   await trip.save();
   user.trips.push(trip._id);
   await user.save();
+  await safeRecord({
+    action_type: "member_add",
+    trip_id: trip._id,
+    actor_user_id: req.user._id,
+    entity_id: trip._id,
+    entity_type: "trip",
+    payload: { target_user_id: user._id },
+  });
   var modified_trip = await Trip.findById(id).populate({
     path: "users",
     model: "TripUser",
@@ -322,8 +428,17 @@ const editTripName = async (req, res) => {
   if (!trip) {
     return res.json({ status: 400, message: "Trip not found" });
   }
+  const oldName = trip.name;
   trip.name = name;
   await trip.save();
+  await safeRecord({
+    action_type: "trip_name_edit",
+    trip_id: trip._id,
+    actor_user_id: req.user._id,
+    entity_id: trip._id,
+    entity_type: "trip",
+    payload: { before: oldName, after: name },
+  });
   return res.json({ status: 200, message: "Trip name updated" });
 };
 
@@ -358,7 +473,9 @@ const deleteTrip = async (req, res) => {
       await Payment.findByIdAndDelete(payment._id);
     });
 
-    await trip.delete();
+    await Activity.deleteMany({ trip: id });
+    await Comment.deleteMany({ trip: id });
+    await trip.deleteOne();
     return res.json({ status: 200, message: "Trip deleted" });
   } catch (error) {
     console.log(error);
