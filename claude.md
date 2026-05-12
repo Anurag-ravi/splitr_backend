@@ -12,6 +12,7 @@ Node.js + Express + MongoDB backend for a group expense splitting application.
 - Nodemailer (OTP email delivery)
 - OTP Generator / CryptoJS
 - CORS
+- Firebase Admin SDK (FCM push notifications)
 
 ---
 
@@ -24,6 +25,7 @@ src/
 ├── middlewares/    # Express middlewares (auth)
 ├── models/         # Mongoose schemas
 ├── routes/         # Express routers
+├── services/       # External service integrations (FCM)
 ├── utilities/      # Shared helpers (activity, otp, token, logging, mail)
 scripts/            # One-off DB maintenance scripts
 index.js            # App entrypoint
@@ -96,7 +98,7 @@ involved            Boolean           default true
 membership_periods  [{ joined_at: Date, left_at: Date|null }]
 ```
 
-`involved=false` is a soft-delete. `membership_periods` tracks every join/leave cycle and is used to scope activity visibility.
+`involved=false` is a soft-delete. `membership_periods` tracks every join/leave cycle.
 
 ### Expense (`src/models/expense.js`)
 
@@ -127,26 +129,28 @@ created      Date
 
 ### Activity (`src/models/activity.js`)
 
-One record per notable event in a trip. Used for the activity feed.
+One record **per recipient user** per event — fan-out model. Every event in a trip produces N Activity documents (one per involved member at the time of the event).
 
 ```
-trip          ObjectId → Trip   required
+user          ObjectId → User       required  (the recipient)
+trip          ObjectId → Trip       required
 action_type   String  enum:
                 trip_create, trip_name_edit,
                 member_join, member_leave, member_add, member_remove,
                 expense_create, expense_update, expense_delete,
-                payment_create, payment_update, payment_delete
-actor         ObjectId → TripUser   required
-target_user   ObjectId → TripUser   nullable
-entity_type   String  enum: trip | expense | payment
-entity_id     ObjectId
-title         String  human-readable summary
-diff          Mixed   { before, after } snapshot, nullable
-read_by[]     ObjectId → TripUser
+                payment_create, payment_update, payment_delete,
+                expense_comment, payment_comment
+entity_type   String  enum: trip | expense | payment   required
+entity_id     ObjectId  required
+category      String  nullable  (expense category, for UI grouping)
+title         String  required  human-readable summary (personalised per recipient)
+subtitle      String  nullable  financial line, e.g. "You owe 50" or "You get back 100"
+net           String  enum: "+" | "-" | "0"   required
+read          Boolean default false
 created_at    Date
 ```
 
-Index: `{ trip: 1, created_at: -1 }`
+Indexes: `{ user, created_at: -1 }`, `{ user, read }`, `{ user, trip, read }`, `{ trip }`
 
 ### Comment (`src/models/comment.js`)
 
@@ -186,11 +190,11 @@ User
         └─> Trip
               ├─> Expense   (paid_by/paid_for ref TripUser)
               ├─> Payment   (by/to ref TripUser)
-              ├─> Activity  (actor/target_user ref TripUser)
+              ├─> Activity  (user refs User; entity_id refs Expense|Payment|Trip)
               └─> Comment   (created_by ref TripUser, entity_id ref Expense|Payment)
 ```
 
-**Critical**: Expenses, Payments, Activities, and Comments all reference `TripUser`, NOT `User`.
+**Critical**: Expenses, Payments, and Comments reference `TripUser`, NOT `User`. Activity records reference `User` directly (the recipient) but all other actor/target info is encoded in the rendered `title`/`subtitle`.
 
 ---
 
@@ -267,47 +271,50 @@ JWT is read from the `Authorization` header (raw token, no `Bearer` prefix curre
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
-| GET | `/` | ✓ | Get activities across all trips. Query params: `from` (ISO date), `page`, `limit` (default 50). Returns `{ data[], unread_count, pagination }`. Each item has a `read` boolean. |
+| GET | `/` | ✓ | Get activities for the current user. Query params: `offset` (default 0), `limit` (default 20). Returns `{ status, data[], pagination: { offset, limit, total } }`. Each item has a `read` boolean, `net` (+/-/0), `title`, `subtitle`, `category`. |
 | POST | `/:id/read` | ✓ | Mark activity as read |
-| GET | `/:id` | ✓ | Get activity detail (includes `diff`) |
 
 ---
 
 ## Activity System
 
-### How it works
+### Fan-out model
 
-Every mutation (create/update/delete expense or payment, join/leave/add/remove member, create/rename/delete trip) calls `createActivity(...)` in `src/utilities/activity.js`. Expense and payment mutations also call `createSystemComment(...)` which creates an undeletable audit record on the entity.
+Every mutation (create/update/delete expense or payment, join/leave/add/remove member, create/rename/delete trip, add comment) calls `recordActivity(...)` in `src/utilities/activity.js`.
 
-### Membership-scoped visibility
+`recordActivity` fans out one Activity document per involved trip member at the time of the event. Each document is personalised: `title` and `subtitle` use "You" when the recipient is the actor or payer. `net` signals whether the event is financially positive (`+`), negative (`-`), or neutral (`0`) for that recipient.
 
-Users only see activities that occurred while they were a member of the trip. This is enforced via `TripUser.membership_periods`: an array of `{ joined_at, left_at }` pairs, one per join/leave cycle.
+After inserting Activity rows, `recordActivity` fires-and-forgets `sendActivityNotifications` from `src/services/fcm.js`, which sends FCM push notifications and auto-prunes dead tokens from `User.fcm_tokens`.
 
-`buildMembershipFilter(periods)` in `src/utilities/activity.js` converts these periods into a MongoDB `$or` date range filter applied to `Activity.created_at`.
+Expense and payment mutations additionally call `createSystemComment(...)` to leave an undeletable audit record on the entity.
 
-**Backward compatibility**: If a TripUser has no `membership_periods` recorded, the filter returns `{}` (no restriction), so old data still appears. Run the backfill script to populate historical periods.
+### `recordActivity` signature
 
-### Backfill script
-
-For existing TripUsers created before `membership_periods` was added:
-
-```bash
-# Dry run (inspect output only)
-node scripts/backfill_membership_periods.js
-
-# Apply changes
-DRY_RUN=false node scripts/backfill_membership_periods.js
+```js
+recordActivity({
+  action_type,           // string — see Activity.action_type enum
+  trip_id,               // ObjectId
+  actor_user_id,         // ObjectId (User)
+  entity_id,             // ObjectId
+  entity_type,           // "trip" | "expense" | "payment"
+  payload,               // { expense?, payment?, entity?, target_user_id?, before?, after?, body? }
+  extra_recipient_user_ids, // ObjectId[] — include users who left but should still see the event
+})
 ```
 
-The script approximates `joined_at` as the trip's `created` date.
+### Row rendering
+
+`src/utilities/activity_render.js` contains `renderActivityRows(ctx)`. It takes a context object (trip, actor, target, by, to, expense, payment, recipients, …) and returns an array of Activity-shaped objects ready for `insertMany`. Each `action_type` has its own render function that personalises `title`, `subtitle`, and `net` per recipient.
 
 ---
 
-## Utilities
+## Utilities & Services
 
 | File | Purpose |
 |------|---------|
-| `src/utilities/activity.js` | `createActivity`, `createSystemComment`, `findTripUser`, `snapshotExpense`, `snapshotPayment`, `buildMembershipFilter` |
+| `src/utilities/activity.js` | `recordActivity`, `createSystemComment`, `snapshotExpense`, `snapshotPayment` |
+| `src/utilities/activity_render.js` | `renderActivityRows` — builds personalised Activity rows per recipient |
+| `src/services/fcm.js` | `sendActivityNotifications` — sends FCM multicast, prunes dead tokens |
 | `src/utilities/otp.js` | OTP generation, email delivery, hash verification |
 | `src/utilities/token.js` | JWT generation and OAuth token verification |
 | `src/utilities/logging.js` | Colour-coded console logger (info/warning/error/success/debug/verbose) |
@@ -328,6 +335,7 @@ The script approximates `joined_at` as the trip's `created` date.
 - **`async forEach` in `deleteTrip`** — `trip.users/expenses/payments.forEach(async ...)` does not await. Cascading deletes on trip deletion are fire-and-forget. Replace with `for...of` or `Promise.all`.
 - **No MongoDB transactions** — trip deletion and related cascades are non-atomic. A crash mid-delete can leave orphaned documents.
 - **Client-trusted split amounts** — expense split calculations are sent from the client and stored as-is. No server-side verification.
+- **`membership_periods` not maintained** — `joinTrips`, `addToTrip`, `leaveTrip`, and related paths set `involved` but do not update `membership_periods`. The field exists on TripUser but is currently stale.
 
 ### Missing Features
 
@@ -336,16 +344,17 @@ The script approximates `joined_at` as the trip's `created` date.
 - Pagination on trip/expense/payment list endpoints
 - Rate limiting
 - Refresh tokens
-- Push notification delivery (FCM tokens stored but not used)
+- `GET /activity/:id` detail endpoint (route exists in router import but handler `getActivityDetail` is not implemented)
 
 ---
 
 ## Development Conventions
 
 - Controllers call utility functions; business logic lives in `src/utilities/`.
-- All activity creation and system comment creation goes through `src/utilities/activity.js` — do not call `Activity.create()` or `Comment.create()` directly in controllers.
-- When adding any action that modifies a trip, call `createActivity(...)` after the main mutation succeeds.
-- When a user joins or leaves a trip (any path), push to `tripUser.membership_periods` or close the open period.
+- All activity creation goes through `recordActivity(...)` in `src/utilities/activity.js` — do not call `Activity.create()` or `Activity.insertMany()` directly in controllers.
+- All system comment creation goes through `createSystemComment(...)` — do not call `Comment.create()` directly in controllers.
+- When adding any action that modifies a trip, call `recordActivity(...)` after the main mutation succeeds. Wrap in `safeRecord` (try/catch) so activity failures don't break the main response.
+- When an expense or payment is created or updated, also call `createSystemComment(...)` for the audit trail.
 - Use `.deleteOne()` / `findByIdAndDelete()` instead of the deprecated `.delete()` / `.remove()`.
 - Prefer `for...of` over `forEach` for async iteration.
 
@@ -353,7 +362,7 @@ The script approximates `joined_at` as the trip's `created` date.
 
 - Use `.lean()` for read-only queries.
 - Always check `ObjectId` validity before querying.
-- Suggested indexes: `User.email`, `User.phone`, `Trip.code`, `Activity.{ trip, created_at }` (already defined in schema).
+- Suggested indexes: `User.email`, `User.phone`, `Trip.code`, `Activity.{ user, created_at }` (already defined in schema).
 
 ---
 
@@ -363,28 +372,27 @@ The script approximates `joined_at` as the trip's `created` date.
 
 ```
 User
-  └─> TripUser  ← membership_periods tracks every join/leave
+  └─> TripUser  ← membership_periods exists but is currently not maintained
         └─> Trip
               ├─> Expense   ← paid_by/paid_for reference TripUser IDs
               ├─> Payment   ← by/to reference TripUser IDs
-              ├─> Activity  ← actor/target_user reference TripUser IDs
+              ├─> Activity  ← user field references User ID (recipient)
               └─> Comment   ← created_by references TripUser ID
 ```
 
-Never reference `User` directly from Expense, Payment, Activity, or Comment. Always go through `TripUser`.
+Never reference `User` directly from Expense, Payment, or Comment. Always go through `TripUser`. Activity is the exception — its `user` field is the recipient `User._id`.
 
-### Membership periods rule
+### Activity fan-out contract
 
-Any code path that sets `tripUser.involved = true` must also push `{ joined_at: new Date(), left_at: null }` to `tripUser.membership_periods`.
-
-Any code path that sets `tripUser.involved = false` must also find the open period (`left_at === null`) and set `left_at = new Date()`.
+`recordActivity` creates one Activity document per trip member who is currently `involved`. Activities are personalised at write time; there is no post-hoc filtering. Do not query activities for a user across trip membership windows — every Activity row already belongs to exactly one user.
 
 ### Adding a new action type
 
 1. Add the string to `Activity.action_type` enum in `src/models/activity.js`.
-2. Call `createActivity(...)` from the relevant controller after the mutation.
-3. If the action modifies an expense or payment, also call `createSystemComment(...)`.
+2. Add a render function in `src/utilities/activity_render.js` and add a `case` in `renderActivityRows`.
+3. Call `recordActivity(...)` (wrapped in `safeRecord`) from the relevant controller after the mutation.
+4. If the action modifies an expense or payment, also call `createSystemComment(...)`.
 
-### Activity visibility contract
+### `extra_recipient_user_ids`
 
-Activities are only shown to users during the periods they were members. Do not bypass `buildMembershipFilter` when querying activities for a user.
+Pass user IDs here when a user who just left a trip should still receive the activity (e.g. `member_leave`, `member_remove`). They are de-duplicated against the `involved` list automatically.
