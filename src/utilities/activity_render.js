@@ -19,10 +19,10 @@ const sumAmountByTripUser = (entries) => {
 
 const expenseFinancialLine = (delta) => {
   if (delta > 0) {
-    return { subtitle: `You get back ${fmtMoney(delta)}`, net: "+" };
+    return { subtitle: `You get back ₹${fmtMoney(delta)}`, net: "+" };
   }
   if (delta < 0) {
-    return { subtitle: `You owe ${fmtMoney(-delta)}`, net: "-" };
+    return { subtitle: `You owe ₹${fmtMoney(-delta)}`, net: "-" };
   }
   return { subtitle: "you owe nothing", net: "0" };
 };
@@ -42,7 +42,7 @@ const renderExpenseAction = (ctx, verb) => {
       entity_type: "expense",
       entity_id,
       category: expense.category || null,
-      title: `${personRef(r.userId, actor)} ${verb} ${expense.name} in ${trip.name}`,
+      title: `${personRef(r.userId, actor)} ${verb} "${expense.name}" in "${trip.name}"`,
       subtitle,
       net,
     };
@@ -58,10 +58,10 @@ const renderPaymentAction = (ctx, verb) => {
     let subtitle = null;
     let net = "0";
     if (isBy) {
-      subtitle = `You paid ${fmtMoney(payment.amount)}`;
+      subtitle = `You paid ₹${fmtMoney(payment.amount)}`;
       net = "-";
     } else if (isTo) {
-      subtitle = `You received ${fmtMoney(payment.amount)}`;
+      subtitle = `You received ₹${fmtMoney(payment.amount)}`;
       net = "+";
     }
 
@@ -69,8 +69,8 @@ const renderPaymentAction = (ctx, verb) => {
     const toLabel = to ? personRef(r.userId, to) : "someone";
     const title =
       verb === "paid"
-        ? `${byLabel} paid ${toLabel} ${fmtMoney(payment.amount)} in ${trip.name}`
-        : `${personRef(r.userId, ctx.actor)} ${verb} a payment in ${trip.name}`;
+        ? `${byLabel} paid ${toLabel} ₹${fmtMoney(payment.amount)} in "${trip.name}"`
+        : `${personRef(r.userId, ctx.actor)} ${verb} a payment in "${trip.name}"`;
 
     return {
       user: r.userId,
@@ -95,7 +95,7 @@ const renderTripCreate = (ctx) => {
     entity_type: "trip",
     entity_id,
     category: null,
-    title: `${personRef(r.userId, actor)} created ${trip.name}`,
+    title: `${personRef(r.userId, actor)} created "${trip.name}"`,
     subtitle: null,
     net: "0",
   }));
@@ -110,7 +110,7 @@ const renderTripNameEdit = (ctx) => {
     entity_type: "trip",
     entity_id,
     category: null,
-    title: `${personRef(r.userId, actor)} edited ${rename.before} to ${rename.after}`,
+    title: `${personRef(r.userId, actor)} edited "${rename.before}" to "${rename.after}"`,
     subtitle: null,
     net: "0",
   }));
@@ -125,7 +125,7 @@ const renderMemberJoinLeave = (ctx, verb) => {
     entity_type: "trip",
     entity_id,
     category: null,
-    title: `${personRef(r.userId, actor)} ${verb} ${trip.name}`,
+    title: `${personRef(r.userId, actor)} ${verb} "${trip.name}"`,
     subtitle: null,
     net: "0",
   }));
@@ -161,7 +161,7 @@ const renderExpenseComment = (ctx) => {
     entity_type: "expense",
     entity_id,
     category: expense.category || null,
-    title: `${personRef(r.userId, actor)} commented on ${expense.name}`,
+    title: `${personRef(r.userId, actor)} commented on "${expense.name}" in "${trip.name}"`,
     subtitle: comment_body || null,
     net: "0",
   }));
@@ -176,7 +176,7 @@ const renderPaymentComment = (ctx) => {
     entity_type: "payment",
     entity_id,
     category: null,
-    title: `${personRef(r.userId, actor)} commented on a payment in ${trip.name}`,
+    title: `${personRef(r.userId, actor)} commented on a payment in "${trip.name}"`,
     subtitle: comment_body || null,
     net: "0",
   }));
